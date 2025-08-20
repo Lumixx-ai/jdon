@@ -8008,7 +8008,35 @@ case 'open_red_packet':
             renderChatInterface(chatId);
         }
     }
-    continue;
+	<div class="app-icon" data-target="theme-screen">
+    <div class="icon-bg">🎨</div>
+    <div class="label">外观</div>
+</div>				
+    continue;<!-- 外观设置屏幕 -->
+<div id="theme-screen" class="screen">
+    <div class="header">
+        <div class="back-btn">←</div>
+        <div>外观设置</div>
+        <div class="header-actions">
+            <div id="save-theme-btn" class="save-btn">保存</div>
+        </div>
+    </div>
+    <div class="form-container">
+        <div class="form-group">
+            <label>导入主题配置 (JSON文件)</label>
+            <button class="form-button" id="theme-import-btn">选择JSON文件</button>
+            <input type="file" id="theme-json-input" accept=".json" style="display: none;">
+        </div>
+        
+        <div class="form-group">
+            <label>或直接编辑JSON配置</label>
+            <textarea id="theme-json-textarea" placeholder='{"colors": {"primary": "#007bff","background": "#000000"}}'></textarea>
+        </div>
+        
+        <button class="form-button" id="reset-theme-btn">重置为默认主题</button>
+        <button class="form-button form-button-secondary" id="export-theme-btn">导出当前主题</button>
+    </div>
+</div>
 case 'change_avatar':
     const avatarName = msgData.name;
     // 在该角色的头像库中查找
@@ -14417,6 +14445,191 @@ document.getElementById('chat-messages').addEventListener('click', (e) => {
 
         init();
     });
+
+	// 全局美化配置
+let globalTheme = {
+    colors: {
+        primary: "#007bff",
+        secondary: "#6c757d",
+        background: "#000000",
+        text: "#ffffff"
+    },
+    fonts: {
+        primary: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    },
+    sizes: {
+        screenWidth: "350px",
+        screenHeight: "650px",
+        borderRadius: "0px"
+    }
+};
+
+// 在DOM加载完成后添加事件监听
+document.addEventListener('DOMContentLoaded', function() {
+    // 加载保存的主题设置
+    loadThemeSettings();
+    
+    // 为主题导入按钮添加事件监听
+    document.getElementById('theme-import-btn').addEventListener('click', function() {
+        document.getElementById('theme-json-input').click();
+    });
+    
+    document.getElementById('theme-json-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const themeConfig = JSON.parse(e.target.result);
+                    applyGlobalTheme(themeConfig);
+                    saveThemeConfig(themeConfig);
+                } catch (error) {
+                    alert('无效的JSON文件: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+    
+    // 保存主题按钮
+    document.getElementById('save-theme-btn').addEventListener('click', function() {
+        try {
+            const themeJson = document.getElementById('theme-json-textarea').value;
+            const themeConfig = JSON.parse(themeJson);
+            applyGlobalTheme(themeConfig);
+            saveThemeConfig(themeConfig);
+            alert('主题应用成功！');
+        } catch (error) {
+            alert('无效的JSON格式: ' + error.message);
+        }
+    });
+    
+    // 重置主题按钮
+    document.getElementById('reset-theme-btn').addEventListener('click', function() {
+        if (confirm('确定要重置为默认主题吗？')) {
+            resetThemeToDefault();
+        }
+    });
+    
+    // 导出主题按钮
+    document.getElementById('export-theme-btn').addEventListener('click', function() {
+        exportThemeConfig();
+    });
+});
+
+// 应用全局主题
+function applyGlobalTheme(themeConfig) {
+    const root = document.documentElement;
+    
+    // 应用颜色
+    if (themeConfig.colors) {
+        for (const [key, value] of Object.entries(themeConfig.colors)) {
+            root.style.setProperty(`--${key}-color`, value);
+        }
+    }
+    
+    // 应用字体
+    if (themeConfig.fonts) {
+        for (const [key, value] of Object.entries(themeConfig.fonts)) {
+            root.style.setProperty(`--${key}-font`, value);
+        }
+    }
+    
+    // 应用尺寸
+    if (themeConfig.sizes) {
+        for (const [key, value] of Object.entries(themeConfig.sizes)) {
+            root.style.setProperty(`--${key}`, value);
+        }
+    }
+    
+    // 更新全局主题对象
+    globalTheme = {...globalTheme, ...themeConfig};
+}
+
+// 保存主题配置
+function saveThemeConfig(themeConfig) {
+    localStorage.setItem('ephone_theme', JSON.stringify(themeConfig));
+}
+
+// 加载主题设置
+function loadThemeSettings() {
+    const savedTheme = localStorage.getItem('ephone_theme');
+    if (savedTheme) {
+        try {
+            const themeConfig = JSON.parse(savedTheme);
+            applyGlobalTheme(themeConfig);
+        } catch (error) {
+            console.error('加载主题设置失败:', error);
+        }
+    }
+}
+
+// 重置为主题默认设置
+function resetThemeToDefault() {
+    const defaultTheme = {
+        colors: {
+            primary: "#007bff",
+            secondary: "#6c757d",
+            background: "#000000",
+            text: "#ffffff"
+        },
+        fonts: {
+            primary: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        },
+        sizes: {
+            screenWidth: "350px",
+            screenHeight: "650px",
+            borderRadius: "0px"
+        }
+    };
+    
+    applyGlobalTheme(defaultTheme);
+    saveThemeConfig(defaultTheme);
+    document.getElementById('theme-json-textarea').value = '';
+}
+
+// 导出主题配置
+function exportThemeConfig() {
+    const themeStr = JSON.stringify(globalTheme, null, 2);
+    const blob = new Blob([themeStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ephone-theme.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 </script>
 </body>
+	<style>
+/* 去掉手机边框的样式 */
+#phone-frame {
+    padding: 0 !important;
+    background-color: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+.notch {
+    display: none !important;
+}
+#phone-screen {
+    border-radius: 0 !important;
+    border: none !important;
+}
+body {
+    padding: 0 !important;
+}
+
+/* 外观设置特定样式 */
+#theme-screen .form-container {
+    gap: 15px;
+}
+#theme-json-textarea {
+    font-family: monospace;
+    min-height: 200px;
+}
+</style>
 </html>
